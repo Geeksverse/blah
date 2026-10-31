@@ -1,0 +1,9 @@
+# Copy to ~/.config/mpm/config.toml
+# Highest priority first. The first eligible source becomes the default.
+source_priority = ["pacman", "aur", "flatpak", "npm", "cargo"]
+
+# Managers MPM should ignore even if installed.
+disabled = []
+
+# "yay" or "paru". If unset, the first one found on PATH is used.
+# aur_helper = "paru"
