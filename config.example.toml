@@ -1,9 +1,19 @@
-# Copy to ~/.config/mpm/config.toml
+# Copy to ~/.config/zito/config.toml
 # Highest priority first. The first eligible source becomes the default.
 source_priority = ["pacman", "aur", "flatpak", "npm", "cargo"]
 
-# Managers MPM should ignore even if installed.
+# Managers Zito should ignore even if installed.
 disabled = []
 
 # "yay" or "paru". If unset, the first one found on PATH is used.
 # aur_helper = "paru"
+
+# Explicit "same software" mappings (alias -> canonical name). Applies only to
+# pacman / aur / flatpak. Without an alias, only identical names are merged.
+[aliases]
+# "visual studio code" = "code"
+
+# Default source per software. Only picks the default; never installs,
+# removes or migrates anything.
+[preferred_source]
+# firefox = "flatpak"

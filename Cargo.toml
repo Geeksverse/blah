@@ -1,8 +1,8 @@
 [package]
-name = "mpm"
+name = "zito"
 version = "0.1.0"
 edition = "2021"
-description = "MPM - Meta Package Manager (TUI)"
+description = "Zito - unified software management across package managers (TUI)"
 license = "MIT"
 
 [dependencies]

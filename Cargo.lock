@@ -273,7 +273,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "mpm"
+name = "zito"
 version = "0.1.0"
 dependencies = [
  "anyhow",

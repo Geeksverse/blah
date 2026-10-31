@@ -155,8 +155,12 @@ impl App {
             dirty: true,
         };
         let ready = app.statuses.iter().filter(|s| s.eligible()).count();
+        let warnings = app.cfg.warnings();
         app.message = match cfg_err {
             Some(e) => format!("config error (using defaults): {e}"),
+            None if !warnings.is_empty() => {
+                format!("{ready} manager(s) ready. config warning: {}", warnings.join("; "))
+            }
             None => format!("{ready} package manager(s) ready. Press / to search, ? for help."),
         };
         app.reload_installed(None);
@@ -736,20 +740,35 @@ pub fn execute_plan(plan: &[PlannedOp]) -> Vec<OpStatus> {
     use std::os::unix::process::ExitStatusExt;
 
     let mut results = Vec::new();
+    let mut history_errors: Vec<String> = Vec::new();
     for p in plan {
         println!("\n\x1b[1m==> [{}] {}\x1b[0m\n    $ {}\n", p.kind.label(), p.op, p.spec.display());
-        let (status, detail) = match exec::run_interactive(&p.spec) {
-            Ok(s) if s.success() => (OpStatus::Successful, None),
+        let started = std::time::Instant::now();
+        // Success is judged by the real exit status, never by the process having
+        // merely been launched. Launch failures are told apart from manager failures.
+        let (status, detail, exit_code) = match exec::run_interactive(&p.spec) {
+            Ok(s) if s.success() => (OpStatus::Successful, None, s.code()),
             Ok(s) if s.signal() == Some(libc::SIGINT) || s.code() == Some(130) => {
-                (OpStatus::Cancelled, Some("interrupted".to_string()))
+                (OpStatus::Cancelled, Some("interrupted".to_string()), s.code())
             }
             Ok(s) => (
                 OpStatus::Failed,
-                Some(format!("exit status {}", s.code().map_or("signal".to_string(), |c| c.to_string()))),
+                Some(format!(
+                    "`{}` exited with status {}",
+                    p.spec.program,
+                    s.code().map_or("signal".to_string(), |c| c.to_string())
+                )),
+                s.code(),
             ),
-            Err(e) => (OpStatus::Failed, Some(e.to_string())),
+            Err(e) => (
+                OpStatus::Failed,
+                Some(format!("could not launch `{}`: {e}", p.spec.program)),
+                None,
+            ),
         };
-        let _ = history::append(&Record {
+        let duration_ms = started.elapsed().as_millis() as u64;
+        if let Err(e) = history::append(&Record {
+            v: history::SCHEMA,
             ts: history::now(),
             op: p.op.to_string(),
             manager: p.kind.label().to_string(),
@@ -758,7 +777,11 @@ pub fn execute_plan(plan: &[PlannedOp]) -> Vec<OpStatus> {
             after: None,
             status: status.to_string(),
             detail,
-        });
+            exit_code,
+            duration_ms: Some(duration_ms),
+        }) {
+            history_errors.push(format!("[{}] {}: {e}", p.kind.label(), p.op));
+        }
         results.push(status);
     }
 
@@ -770,12 +793,19 @@ pub fn execute_plan(plan: &[PlannedOp]) -> Vec<OpStatus> {
     let overall = if ok == results.len() {
         OpStatus::Successful
     } else if ok == 0 {
-        OpStatus::Failed
+        if results.iter().all(|s| *s == OpStatus::Cancelled) {
+            OpStatus::Cancelled
+        } else {
+            OpStatus::Failed
+        }
     } else {
         OpStatus::PartiallySuccessful
     };
     println!("    Overall: {overall}");
-    println!("\nPress Enter to return to MPM …");
+    for e in &history_errors {
+        println!("    warning: could not write history for {e}");
+    }
+    println!("\nPress Enter to return to Zito …");
     let mut s = String::new();
     let _ = std::io::stdin().read_line(&mut s);
     results

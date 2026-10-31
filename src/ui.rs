@@ -62,7 +62,7 @@ fn draw_header(f: &mut Frame, app: &App, area: Rect) {
         spans.push(Span::styled(format!(" {} {} ", i + 1, v.title()), st));
     }
     f.render_widget(
-        Paragraph::new(Line::from(spans)).block(Block::bordered().title(" MPM ").border_style(Style::new().fg(Color::Cyan))),
+        Paragraph::new(Line::from(spans)).block(Block::bordered().title(" Zito ").border_style(Style::new().fg(Color::Cyan))),
         cols[0],
     );
 
@@ -202,6 +202,8 @@ fn details_lines(app: &App) -> Vec<Line<'static>> {
                 ("Manager".to_string(), r.manager.clone()),
                 ("Status".to_string(), r.status.clone()),
                 ("Before".to_string(), r.before.clone().unwrap_or_default()),
+                ("Exit code".to_string(), r.exit_code.map(|c| c.to_string()).unwrap_or_default()),
+                ("Duration".to_string(), r.duration_ms.map(|d| format!("{:.1}s", d as f64 / 1000.0)).unwrap_or_default()),
                 ("Detail".to_string(), r.detail.clone().unwrap_or_default()),
             ];
             let kv: Vec<_> = kv.into_iter().filter(|(_, v)| !v.is_empty()).collect();
@@ -256,6 +258,9 @@ fn package_details(app: &App) -> Vec<Line<'static>> {
         }
         l.push(Line::from(s));
     }
+    if let Some(why) = id.reason.explain() {
+        l.push(Line::from(Span::styled(why, dim())));
+    }
     l.push(Line::raw(""));
     match app.info_cache.get(&(sel.manager, sel.id.clone())) {
         Some(kv) => {
@@ -276,7 +281,7 @@ fn key_line(key: &str, text: String) -> Line<'static> {
 
 fn options_lines(app: &App) -> Vec<Line<'static>> {
     match app.view {
-        View::Managers => return vec![key_line("e", "enable / disable (session)".into()), key_line("R", "re-detect: restart MPM".into())],
+        View::Managers => return vec![key_line("e", "enable / disable (session)".into()), key_line("R", "re-detect: restart Zito".into())],
         View::History => return vec![key_line("R", "reload history".into())],
         _ => {}
     }

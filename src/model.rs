@@ -1,4 +1,4 @@
-//! Core domain types shared across MPM.
+//! Core domain types shared across Zito.
 #![allow(dead_code)]
 
 use serde::{Deserialize, Serialize};
@@ -90,6 +90,30 @@ pub struct SoftwareIdentity {
     pub name: String,
     pub description: String,
     pub entries: Vec<PackageEntry>,
+    /// Why these entries were put together (diagnostics for grouping).
+    pub reason: GroupReason,
+}
+
+/// Explains how an identity was formed. Grouping is conservative, so the
+/// reason is always one of a small set of strong signals.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum GroupReason {
+    /// One package entry; nothing was merged.
+    Single,
+    /// Entries share the same normalized display name.
+    ExactName(String),
+    /// Entries were joined through an explicit, user-configured alias.
+    Alias(String),
+}
+
+impl GroupReason {
+    pub fn explain(&self) -> Option<String> {
+        match self {
+            GroupReason::Single => None,
+            GroupReason::ExactName(n) => Some(format!("grouped: identical normalized name “{n}”")),
+            GroupReason::Alias(n) => Some(format!("grouped: configured alias → “{n}”")),
+        }
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -141,7 +165,7 @@ impl fmt::Display for OpStatus {
     }
 }
 
-/// A command MPM will hand to the responsible package manager.
+/// A command Zito will hand to the responsible package manager.
 #[derive(Debug, Clone)]
 pub struct CommandSpec {
     pub program: String,

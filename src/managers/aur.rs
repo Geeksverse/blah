@@ -58,7 +58,7 @@ impl Manager for Aur {
 
     fn plan(&self, op: Op, e: Option<&PackageEntry>) -> Result<CommandSpec> {
         Ok(match op {
-            // Helpers call sudo themselves; MPM does not escalate for them.
+            // Helpers call sudo themselves; Zito does not escalate for them.
             Op::Install | Op::Upgrade => {
                 CommandSpec::new(&self.helper, &["-S", need(e)?.id.as_str()])
             }

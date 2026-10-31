@@ -1,6 +1,6 @@
 //! Package manager abstraction. Every manager is driven through its CLI;
-//! MPM only parses output and builds commands. Nothing is installed or
-//! removed by MPM itself.
+//! Zito only parses output and builds commands. Nothing is installed or
+//! removed by Zito itself.
 
 pub mod aur;
 pub mod cargo;
